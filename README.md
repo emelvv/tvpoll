@@ -23,7 +23,7 @@ demo-only-admin-token-efir-public-playground-v1
 
 **Ограничения бесплатного хостинга:** Render может запускать сервис около минуты после 15 минут бездействия. Free PostgreSQL этого стенда действует **до 8 ноября 2026**. Стенд использует один небольшой PostgreSQL instance с тремя logical databases; это демонстрация функций, а не мощности национального эфира. [Конфигурация и воспроизведение deployment](docs/deployment.md).
 
-![Рабочая страница анонимного голосования](docs/screenshots/voting-desktop.jpg)
+![Рабочая страница опубликованного демо](docs/screenshots/hosting-voting.jpg)
 
 ## Попробовать за 3 минуты
 
@@ -69,6 +69,10 @@ local-demo-admin-token-9d6e840b7241b05d
 
 <details>
 <summary>Мобильное голосование, подтверждение и вход в админку</summary>
+
+![Создание собственного A/B опроса на Render](docs/screenshots/hosting-create.jpg)
+
+![Минутный опрос в локальном запуске](docs/screenshots/voting-desktop.jpg)
 
 <img src="docs/screenshots/voting-mobile.jpg" width="360" alt="Мобильное голосование" />
 

@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-09T11:09:05.570011+00:00",
+  "base": "https://efir-tvpoll-emelvv.onrender.com",
+  "created_via": "admin UI",
+  "poll_id": "04fdba1a-3bd8-4bae-b232-b77ec414c240",
+  "voted_via": "browser UI using same browser profile as previous fixture",
+  "total_votes": 1,
+  "option_counts": [
+    0,
+    1
+  ],
+  "smoke_poll_after_browser_vote": {
+    "poll_id": "ba52294a-027b-4867-992e-6db31e1310a0",
+    "total_votes": 11,
+    "option_counts": [
+      4,
+      3,
+      2,
+      2
+    ],
+    "different_answer_repeat_kept_first": true
+  },
+  "daily_poll_voted_by_verification_browser": false,
+  "browser_console_errors": 0,
+  "browser_console_warnings": 0,
+  "passed": true
+}

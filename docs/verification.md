@@ -91,6 +91,10 @@ docker compose exec -T server load -mode=benchmark -voters=500000 \
 
 Внутренний браузер затем отправил один голос в первый вариант и повтор во второй после reload. UI подтвердил сохранение первого ответа, admin UI и API показали total11, counts `[4,3,2,2]`. [Runtime record](evidence/hosting-runtime.jsonl). Проверены `204` от session, атрибуты `HttpOnly; Secure; SameSite=Lax` и `401` от admin API без токена: [security evidence](evidence/hosting-security.json). Это проверка настоящего HTTPS backend и PostgreSQL; cloud capacity benchmark не запускался. Снимок `hosting-admin.jpg` показывает этот результат.
 
+После успешной выкладки commit `d999f33901e732fa8bc339e8cfd7cc48eb25fb03` проверены тот же ID и неизменные total11 / counts `[4,3,2,2]`. CI runtime commit завершился success. Затем через admin UI создан A/B опрос `04fdba1a-3bd8-4bae-b232-b77ec414c240`, в нём тот же browser profile успешно проголосовал за «Комфорт»; UI и API показали total1 / counts `[0,1]`. Poll-scoped дедупликация позволяет этому браузеру участвовать в другом опросе. [Browser record](evidence/hosting-browser.json).
+
+Снимки `hosting-voting.jpg`, `hosting-create.jpg`, `hosting-admin.jpg` сделаны непосредственно с публичного HTTPS стенда. Daily poll в снимке главной не был отправлен этим браузером. Консоли голосования и admin UI не содержали warning/error. Позднейшие commits evidence/docs не меняют исполняемый runtime этого deployment.
+
 ## Скриншоты локального стенда
 
 Сняты браузером с работающего локального сервиса, без редактирования чисел или DOM:

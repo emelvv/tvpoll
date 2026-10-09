@@ -11,6 +11,8 @@ Docker image запускает тот же Go-сервис, что исполь
 - Metadata database фактически называется `control_cy0e` (Render добавил suffix). Дополнительные `votes_0`, `votes_1` созданы provisioning-командой. Все три находятся на одном instance.
 - Сервис использует HTTPS, `COOKIE_SECURE=true`, `/readyz`, отдельные приватные HMAC secrets и внутренние TLS PostgreSQL URLs. Payment method не добавлялся; выбран бесплатный compute без autoscaling.
 - HTTP smoke создал настоящий опрос, принял 10 разных cookie-сессий и проверил 5 повторов с изменённым ответом: counts `[3,3,2,2]`, total `10`, failures `0`. [Raw smoke](evidence/hosting-smoke.json), [provisioning evidence без credentials](evidence/hosting-provision.json).
+- Браузер добавил один голос, повтор во второй вариант оставил counts `[4,3,2,2]`. Повторная выкладка runtime commit `d999f33901e732fa8bc339e8cfd7cc48eb25fb03` успешно завершена; total11 и все counters сохранились: [проверки до/после](evidence/hosting-runtime.jsonl). [CI этого runtime commit](https://github.com/emelvv/tvpoll/actions/runs/37921565889) — success.
+- Через облачную admin UI создан дополнительный A/B опрос и принят один голос; admin UI показала counts `[0,1]`. Проверены cookie flags и отказ без admin token: [browser scenario](evidence/hosting-browser.json), [security evidence](evidence/hosting-security.json). Скриншоты в README показывают работающий стенд.
 
 Это проверка функциональности небольшой облачной машины. Высокая нагрузка на Free-стенде не запускалась; локальный benchmark и национальный capacity plan описаны отдельно.
 
