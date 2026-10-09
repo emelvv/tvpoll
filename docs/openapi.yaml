@@ -15,7 +15,7 @@ info:
     Origin may be omitted by non-browser clients. No cross-origin CORS API is provided.
 
     Except for immutable public poll metadata, responses are Cache-Control no-store.
-    All endpoints except /healthz share bounded admission and can return 503 under
+    All documented endpoints except /healthz share bounded admission and can return 503 under
     overload. Poll IDs must use the lowercase canonical UUID representation.
 servers:
   - url: http://localhost:8080

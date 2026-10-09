@@ -43,3 +43,13 @@ Raw evidence находится в `docs/evidence`, а методика — в `
 ## Публикация
 
 Пользователь явно запросил публичный GitHub-репозиторий. Создан `https://github.com/emelvv/tvpoll`, owner `emelvv`, visibility public. Код, документация, AI artifacts, tests и screenshots публикуются в нём; `.env` исключён. Сообщения людям, комментарии и обращения во внешних сервисах не отправлялись.
+
+## Размещение живого демо
+
+Дополнительное поручение пользователя: найти хостинг и разместить интерактивную демоверсию. Выбран Render Docker + настоящая PostgreSQL; выбор и актуальные официальные ограничения записаны в [hosting-research.md](hosting-research.md). Sites hosting был рассмотрен, но его Workers runtime не исполняет этот Go-сервис.
+
+Пользователь явно разрешил GitHub login / чтение email для Render, затем самостоятельно вошёл в Render и GitHub во внутреннем браузере. Созданы только Free resources во Frankfurt; payment method не добавлялся. При смене региона форма сбросила выбранный Free plan: попытка продолжения остановилась на Add Card до создания ресурса. Модальное окно закрыто, Free повторно выбран и `$0` проверен перед успешным созданием. Платный ресурс не создан, данные карты не вводились.
+
+Control database Render получила имя `control_cy0e`. Инструмент `cmd/provision-demo` создал `votes_0`, `votes_1` через внешний TLS connection; подтвердил PostgreSQL17.11 и `fsync=on`. Web service использует только внутренние database URLs, private cookie/dedup secrets и намеренно публичный admin token из README. Private credentials хранятся вне репозитория и в environment Render; в evidence нет DSN, паролей, cookie values или приватных browser screenshots.
+
+Commit `6710c8a9e6eaffeba838d02e496010cc4a01f6dd` получил успешный CI и был опубликован Render как Live. Проверен реальный HTTPS URL `https://efir-tvpoll-emelvv.onrender.com`. Публичный HTTP smoke:10 voters,5 изменённых повторов,0 failures,все четыре counters совпали. Это функциональный smoke, не cloud benchmark. Optional daily seeder и его тесты задокументированы в [demo.md](demo.md). Для 24-часового demo UI countdown дополнен форматом часов; минутные опросы продолжают показывать минуты и секунды.

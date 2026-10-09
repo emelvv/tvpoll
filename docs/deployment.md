@@ -2,6 +2,18 @@
 
 Docker image запускает тот же Go-сервис, что используется локально. PostgreSQL остаётся настоящей базой, а не браузерной имитацией. `PORT`, предоставляемый hosting platform, поддерживается; явный `HTTP_ADDR` имеет приоритет.
 
+## Опубликованный стенд
+
+9 октября 2026 опубликован **[efir-tvpoll-emelvv.onrender.com](https://efir-tvpoll-emelvv.onrender.com)**. [Админка](https://efir-tvpoll-emelvv.onrender.com/admin) принимает публичный playground token из README. Вопросы и ответы этого стенда — тестовые.
+
+- Render Free Web Service, Docker, Frankfurt: 0,1 CPU / 512 MB, `$0/month`.
+- Render Free PostgreSQL 17.11, Frankfurt: 0,1 CPU / 256 MB, 1 GB; dashboard указывает expiry **8 ноября 2026**.
+- Metadata database фактически называется `control_cy0e` (Render добавил suffix). Дополнительные `votes_0`, `votes_1` созданы provisioning-командой. Все три находятся на одном instance.
+- Сервис использует HTTPS, `COOKIE_SECURE=true`, `/readyz`, отдельные приватные HMAC secrets и внутренние TLS PostgreSQL URLs. Payment method не добавлялся; выбран бесплатный compute без autoscaling.
+- HTTP smoke создал настоящий опрос, принял 10 разных cookie-сессий и проверил 5 повторов с изменённым ответом: counts `[3,3,2,2]`, total `10`, failures `0`. [Raw smoke](evidence/hosting-smoke.json), [provisioning evidence без credentials](evidence/hosting-provision.json).
+
+Это проверка функциональности небольшой облачной машины. Высокая нагрузка на Free-стенде не запускалась; локальный benchmark и национальный capacity plan описаны отдельно.
+
 ## Конфигурация
 
 Для временного free demo подходят один Render Free Web Service и один Free Postgres instance с тремя logical databases: `control`, `votes_0`, `votes_1`. Разные logical databases на одном PostgreSQL instance не являются физически независимыми shards и не увеличивают суммарную мощность машины. Локальный Compose использует три отдельных PostgreSQL контейнера; production должен распределять shards по рассчитанной инфраструктуре.
@@ -43,4 +55,4 @@ Free Postgres имеет1GB и истекает через30дней после 
 5. Admin UI показывает этот результат; credentials другого local environment не подходят.
 6. После redeploy/restart предыдущие polls и results сохраняются.
 
-Дату фактического expiry и опубликованный URL следует брать из dashboard текущего deployment. План конфигурации сам по себе не доказывает, что demo уже опубликовано; фактический URL и проверенный статус указываются в README после успешного deploy.
+При воспроизведении deployment используйте URL и expiry из dashboard своего стенда: новая база получит собственное имя и срок жизни.

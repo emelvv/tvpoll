@@ -31,7 +31,11 @@ function updateState() {
   button.disabled = submitting || voted || !sessionReady || !state.open || selected < poll.min_choices || selected > poll.max_choices;
   for (const input of form.querySelectorAll("input")) input.disabled = submitting || voted || !state.open;
   const remaining = Math.max(0, Math.ceil((Date.parse(poll.closes_at) - Date.now()) / 1000));
-  document.querySelector("#poll-time").textContent = state.open ? `До завершения: ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}` : state.kind === "future" ? `Начало: ${dateTime(poll.opens_at)}` : `Завершён: ${dateTime(poll.closes_at)}`;
+  const seconds = String(remaining % 60).padStart(2, "0");
+  const countdown = remaining >= 3600
+    ? `${Math.floor(remaining / 3600)}:${String(Math.floor(remaining / 60) % 60).padStart(2, "0")}:${seconds}`
+    : `${Math.floor(remaining / 60)}:${seconds}`;
+  document.querySelector("#poll-time").textContent = state.open ? `До завершения: ${countdown}` : state.kind === "future" ? `Начало: ${dateTime(poll.opens_at)}` : `Завершён: ${dateTime(poll.closes_at)}`;
 }
 
 async function initialize() {

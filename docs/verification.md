@@ -85,7 +85,13 @@ docker compose exec -T server load -mode=benchmark -voters=500000 \
 
 `GET /metrics` защищён тем же bearer token; доступны accepted, duplicate, rejected, errors, batches и pending queue gauge. Это основа наблюдения, а не полный production monitoring stack.
 
-## Скриншоты
+## Публичный HTTPS стенд
+
+9 октября 2026 на [Render demo](https://efir-tvpoll-emelvv.onrender.com) выполнен низкообъёмный функциональный smoke: `go run ./cmd/load -base=https://efir-tvpoll-emelvv.onrender.com -mode=smoke -voters=10 -concurrency=5 -duplicate-every=2 -poll-duration=10m`, с публичным demo admin token из README. Он проверил создание и replay, 10 голосов, 5 изменённых повторов и каждый counter; total10, counts `[3,3,2,2]`, failures0. [Raw result](evidence/hosting-smoke.json).
+
+Внутренний браузер затем отправил один голос в первый вариант и повтор во второй после reload. UI подтвердил сохранение первого ответа, admin UI и API показали total11, counts `[4,3,2,2]`. [Runtime record](evidence/hosting-runtime.jsonl). Проверены `204` от session, атрибуты `HttpOnly; Secure; SameSite=Lax` и `401` от admin API без токена: [security evidence](evidence/hosting-security.json). Это проверка настоящего HTTPS backend и PostgreSQL; cloud capacity benchmark не запускался. Снимок `hosting-admin.jpg` показывает этот результат.
+
+## Скриншоты локального стенда
 
 Сняты браузером с работающего локального сервиса, без редактирования чисел или DOM:
 
