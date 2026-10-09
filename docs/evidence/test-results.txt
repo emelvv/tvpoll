@@ -1,0 +1,92 @@
+=== RUN   TestRunRetriesPreserveIdentityAndOriginalChoice
+=== RUN   TestRunRetriesPreserveIdentityAndOriginalChoice/overload
+=== RUN   TestRunRetriesPreserveIdentityAndOriginalChoice/lost-acknowledgement
+--- PASS: TestRunRetriesPreserveIdentityAndOriginalChoice (0.63s)
+    --- PASS: TestRunRetriesPreserveIdentityAndOriginalChoice/overload (0.31s)
+    --- PASS: TestRunRetriesPreserveIdentityAndOriginalChoice/lost-acknowledgement (0.31s)
+=== RUN   TestRunDetectsIncorrectOptionCounts
+--- PASS: TestRunDetectsIncorrectOptionCounts (0.00s)
+=== RUN   TestCreateRetryReusesKeyAndBody
+--- PASS: TestCreateRetryReusesKeyAndBody (0.10s)
+PASS
+coverage: 66.0% of statements
+ok  	github.com/emelvv/tvpoll/cmd/load	3.231s	coverage: 66.0% of statements
+	github.com/emelvv/tvpoll/cmd/server		coverage: 0.0% of statements
+=== RUN   TestAnonymousVoteRetryAndPrivacy
+--- PASS: TestAnonymousVoteRetryAndPrivacy (0.00s)
+=== RUN   TestRejectedRequestsDoNotEnqueue
+=== RUN   TestRejectedRequestsDoNotEnqueue/missing_cookie
+=== RUN   TestRejectedRequestsDoNotEnqueue/empty
+=== RUN   TestRejectedRequestsDoNotEnqueue/range
+=== RUN   TestRejectedRequestsDoNotEnqueue/duplicate
+=== RUN   TestRejectedRequestsDoNotEnqueue/unknown_field
+=== RUN   TestRejectedRequestsDoNotEnqueue/trailing_JSON
+=== RUN   TestRejectedRequestsDoNotEnqueue/oversized
+--- PASS: TestRejectedRequestsDoNotEnqueue (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/missing_cookie (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/empty (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/range (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/duplicate (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/unknown_field (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/trailing_JSON (0.00s)
+    --- PASS: TestRejectedRequestsDoNotEnqueue/oversized (0.00s)
+=== RUN   TestPollWindowAndOverload
+--- PASS: TestPollWindowAndOverload (0.00s)
+=== RUN   TestAdminBoundaryAndResultsUnavailable
+--- PASS: TestAdminBoundaryAndResultsUnavailable (0.00s)
+=== RUN   TestCreateValidationAndOrigin
+--- PASS: TestCreateValidationAndOrigin (0.00s)
+=== RUN   TestSignedCookieTamperExpiryAndPollScope
+--- PASS: TestSignedCookieTamperExpiryAndPollScope (0.00s)
+=== RUN   TestChoiceMask32AndMultiple
+--- PASS: TestChoiceMask32AndMultiple (0.00s)
+PASS
+coverage: 72.4% of statements
+ok  	github.com/emelvv/tvpoll/internal/api	1.687s	coverage: 72.4% of statements
+=== RUN   TestConfigValidation
+--- PASS: TestConfigValidation (0.00s)
+=== RUN   TestSecretsAndSecureCookie
+--- PASS: TestSecretsAndSecureCookie (0.00s)
+=== RUN   TestDuplicateShardsRejected
+--- PASS: TestDuplicateShardsRejected (0.00s)
+PASS
+coverage: 83.7% of statements
+ok  	github.com/emelvv/tvpoll/internal/config	2.203s	coverage: 83.7% of statements
+=== RUN   TestBatchDrainsAndRoutesStableRetries
+--- PASS: TestBatchDrainsAndRoutesStableRetries (0.00s)
+=== RUN   TestBackpressureAndUnknownOutcome
+--- PASS: TestBackpressureAndUnknownOutcome (0.00s)
+=== RUN   TestConcurrentCloseEnqueue
+--- PASS: TestConcurrentCloseEnqueue (0.00s)
+PASS
+coverage: 91.9% of statements
+ok  	github.com/emelvv/tvpoll/internal/ingest	1.938s	coverage: 91.9% of statements
+?   	github.com/emelvv/tvpoll/internal/model	[no test files]
+=== RUN   TestIntegrationForcesDurableCommitSetting
+--- PASS: TestIntegrationForcesDurableCommitSetting (0.20s)
+=== RUN   TestIntegrationConcurrentCreateIdempotency
+--- PASS: TestIntegrationConcurrentCreateIdempotency (0.20s)
+=== RUN   TestIntegrationConcurrentDuplicateVotes
+--- PASS: TestIntegrationConcurrentDuplicateVotes (0.22s)
+=== RUN   TestIntegrationBatchReplayAndPersistedMultiChoice
+--- PASS: TestIntegrationBatchReplayAndPersistedMultiChoice (0.23s)
+=== RUN   TestIntegrationRejectedOrCancelledBatchDoesNotCount
+--- PASS: TestIntegrationRejectedOrCancelledBatchDoesNotCount (0.17s)
+=== RUN   TestIntegrationCounterFailureRollsBackReceipt
+--- PASS: TestIntegrationCounterFailureRollsBackReceipt (0.18s)
+=== RUN   TestIntegrationCanonicalUUIDBatchReceipts
+--- PASS: TestIntegrationCanonicalUUIDBatchReceipts (0.16s)
+=== RUN   TestIntegrationUnavailableShardFailsResultsAndReadiness
+--- PASS: TestIntegrationUnavailableShardFailsResultsAndReadiness (0.16s)
+=== RUN   TestIntegrationRejectsAliasedShardDatabase
+--- PASS: TestIntegrationRejectsAliasedShardDatabase (0.19s)
+=== RUN   TestCanonicalPayloadIgnoresIDAndTimeZone
+--- PASS: TestCanonicalPayloadIgnoresIDAndTimeZone (0.00s)
+=== RUN   TestRejectInvalidConfiguration
+--- PASS: TestRejectInvalidConfiguration (0.00s)
+=== RUN   TestWriteBatchRejectsInvalidBallotBeforeConnecting
+--- PASS: TestWriteBatchRejectsInvalidBallotBeforeConnecting (0.00s)
+PASS
+coverage: 80.1% of statements
+ok  	github.com/emelvv/tvpoll/internal/store	4.529s	coverage: 80.1% of statements
+	github.com/emelvv/tvpoll/web		coverage: 0.0% of statements

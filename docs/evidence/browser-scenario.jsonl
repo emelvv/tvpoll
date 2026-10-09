@@ -1,0 +1,1 @@
+{"at": "2026-10-09T09:52:07.899197+00:00", "stage": "browser-retry-preserved-first-choice", "healthz": 200, "readyz": 200, "results_status": 200, "total_votes": 241, "option_counts": [61, 60, 60, 60], "passed": true}

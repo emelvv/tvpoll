@@ -1,0 +1,680 @@
+openapi: 3.0.3
+info:
+  title: Efir TV Poll API
+  version: 1.0.0
+  description: |
+    Anonymous, cookie-based voting with immutable polls and an administrative API.
+    Establish a session before voting. A successful vote response follows database
+    commit; an error or lost response can leave the outcome unknown. Retry using
+    the same browser cookie and choices while the poll is open.
+
+    JSON request bodies must use Content-Type application/json, contain exactly
+    one object, have no unknown fields, and fit within 16 KiB. Invalid content
+    type, oversized bodies and malformed JSON return 400, rather than 415/413.
+    POST requests carrying an Origin header must match PUBLIC_ORIGIN exactly.
+    Origin may be omitted by non-browser clients. No cross-origin CORS API is provided.
+
+    Except for immutable public poll metadata, responses are Cache-Control no-store.
+    All endpoints except /healthz share bounded admission and can return 503 under
+    overload. Poll IDs must use the lowercase canonical UUID representation.
+servers:
+  - url: http://localhost:8080
+    description: Local Docker Compose service
+tags:
+  - name: Public
+    description: Session establishment and anonymous voting
+  - name: Admin
+    description: Poll management and aggregate results
+  - name: Operations
+    description: Health, readiness and authenticated metrics
+security: []
+paths:
+  /api/session:
+    post:
+      tags: [Public]
+      operationId: establishSession
+      summary: Establish or retain a signed browser identity
+      description: |
+        No request body is required. A valid existing efir_voter cookie is retained.
+        Missing, expired or invalid cookies are replaced with a newly signed random
+        identity. This endpoint does not create an account or cast a vote.
+        The browser must retain the HttpOnly cookie for deduplication. Concurrent
+        first visits before a cookie exists can receive different identities.
+      responses:
+        '204':
+          description: Session established or existing identity retained; no body
+          headers:
+            Set-Cookie:
+              description: |
+                Present only when a new identity is issued. HttpOnly; Path=/;
+                SameSite=Lax; Max-Age=31536000; Secure when COOKIE_SECURE=true.
+                The opaque value is not a JWT and must not be fabricated by clients.
+              schema:
+                type: string
+              example: efir_voter=OPAQUE_SIGNED_VALUE; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax
+        '403':
+          $ref: '#/components/responses/CrossOrigin'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/polls/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PollID'
+    get:
+      tags: [Public]
+      operationId: getPoll
+      summary: Read immutable public poll metadata
+      description: |
+        Returns the question, options, selection limits and voting window without
+        personal data or cookie issuance. Metadata is available before and after
+        the voting window. It is suitable for shared CDN caching.
+      parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          description: Exact ETag returned by this endpoint, including double quotes
+          schema:
+            type: string
+          example: '"d1b7c35a-6bf5-4f1f-a73d-9a6a58053398"'
+      responses:
+        '200':
+          description: Immutable poll metadata
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PollCacheControl'
+            ETag:
+              $ref: '#/components/headers/PollETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+        '304':
+          description: If-None-Match exactly matched the ETag; no body
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PollCacheControl'
+            ETag:
+              $ref: '#/components/headers/PollETag'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/polls/{id}/votes:
+    parameters:
+      - $ref: '#/components/parameters/PollID'
+    post:
+      tags: [Public]
+      operationId: castVote
+      summary: Cast an anonymous vote; the first committed answer wins
+      security:
+        - VoterCookie: []
+      description: |
+        Choices are zero-based option indexes. The server validates choices and
+        checks opens_at <= admission time < closes_at, then enqueues the ballot.
+        Admission time is taken after metadata lookup and body validation.
+        An admitted ballot can commit after closes_at or after the HTTP request
+        ends. Confirmation waiting is limited to five seconds after enqueue.
+
+        Reusing the same identity for the same poll does not increment counts or
+        change the original answer, even when the new choices differ. A duplicate
+        response confirms a prior ballot, not acceptance of new choices.
+        After closes_at all attempts return 409, including retries of a previously
+        accepted vote. No separate personal receipt lookup is implemented.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteRequest'
+            examples:
+              single:
+                value: {choices: [0]}
+              multiple:
+                value: {choices: [0, 2]}
+      responses:
+        '201':
+          description: A new ballot and corresponding counters were committed
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [accepted]
+        '200':
+          description: This identity already has a ballot; the first answer is retained
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [already_voted]
+        '400':
+          description: invalid_request or invalid_choices; no ballot admitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: invalid_choices
+                message: duplicate option
+        '403':
+          description: |
+            identity_required for a missing, invalid or expired voter cookie;
+            cross_origin when a supplied Origin differs from PUBLIC_ORIGIN.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: identity_required
+                message: enable cookies and establish a session before voting
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: poll_closed; before opens_at or at/after closes_at
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: poll_closed
+                message: poll is not accepting votes
+        '503':
+          description: |
+            overloaded if request admission or the shard queue is full; unavailable
+            if metadata/storage failed; outcome_unknown after confirmation timeout.
+            An unavailable/outcome_unknown vote may already have committed or may
+            still commit. Retry the same cookie and choices while the poll is open.
+            Retry-After is present on queue/HTTP admission failures, storage errors
+            and confirmation timeouts; metadata failures may omit it.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: outcome_unknown
+                message: confirmation timed out; retry with the same browser identity
+  /api/admin/polls:
+    get:
+      tags: [Admin]
+      operationId: listPolls
+      summary: List all polls in creation order, newest first
+      security:
+        - AdminBearer: []
+      description: Current implementation returns the complete list without pagination.
+      responses:
+        '200':
+          description: Poll list, including open, future and closed polls
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [polls]
+                properties:
+                  polls:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Poll'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    post:
+      tags: [Admin]
+      operationId: createPoll
+      summary: Create an immutable poll idempotently
+      security:
+        - AdminBearer: []
+      description: |
+        A new key creates one poll. Replaying the same key and equivalent normalized
+        payload returns that poll, including after its voting window has closed.
+        Reusing the key for a different normalized payload returns 409.
+        Retain the key and payload when retrying an unknown creation outcome.
+        Options and question are trimmed; timestamps normalize to UTC; defaults
+        are applied before identity comparison. Option ordering is significant.
+        There is no edit or delete endpoint. Past voting windows are allowed.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            Unique client-generated key of 8..128 UTF-8 bytes, without leading or
+            trailing whitespace. A fresh UUID is a suitable key. The key is global
+            to poll creation for this service's administrator.
+          schema:
+            type: string
+            x-min-utf8-bytes: 8
+            x-max-utf8-bytes: 128
+          example: 4ac5dac7-9f11-4a51-b1c3-5d319ce4f2aa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollCreate'
+            example:
+              question: Какой вид транспорта вы выбираете чаще?
+              type: single
+              options: [Общественный транспорт, Автомобиль, Велосипед, Пешком]
+              min_choices: 1
+              max_choices: 1
+              opens_at: '2026-10-09T09:00:00Z'
+              closes_at: '2026-10-09T09:01:00Z'
+      responses:
+        '201':
+          description: New poll created and committed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+        '200':
+          description: Same key and normalized payload replayed; original poll returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+        '400':
+          description: invalid_key, invalid_request or invalid_poll
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/CrossOrigin'
+        '409':
+          description: The idempotency key already identifies a different normalized payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: idempotency_conflict
+                message: key already used for another poll
+        '503':
+          description: |
+            overloaded or unavailable; a storage error can mean the creation outcome
+            is unknown. Retry the same Idempotency-Key and payload, never a new key.
+            Retry-After is supplied for HTTP admission overload.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/polls/{id}/results:
+    parameters:
+      - $ref: '#/components/parameters/PollID'
+    get:
+      tags: [Admin]
+      operationId: getResults
+      summary: Read anonymized aggregate counts from all shards
+      security:
+        - AdminBearer: []
+      description: |
+        Each option count uses the same zero-based order as poll.options.
+        total_votes counts participants; in multiple-choice polls the sum of
+        option_counts can exceed total_votes. All shards must be available.
+        The result is not a globally synchronized snapshot while votes are in flight.
+        observed_at is the time the response was assembled, not a transaction
+        snapshot shared by the shards. consistent is currently always false.
+        Closed polls have final counts only after all admitted jobs have completed.
+      responses:
+        '200':
+          description: Complete all-shard aggregate, without voter identifiers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollResults'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: |
+            incomplete_results if any shard read failed; unavailable if metadata
+            failed; overloaded at HTTP admission. No partial successful result is
+            returned. Retry-After is supplied for HTTP admission overload.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: incomplete_results
+                message: one or more shards unavailable; retry later
+  /healthz:
+    get:
+      tags: [Operations]
+      operationId: liveness
+      summary: Check process liveness without querying dependencies
+      description: Exempt from the shared HTTP admission limit; does not prove readiness.
+      responses:
+        '200':
+          description: Process serves HTTP
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+  /readyz:
+    get:
+      tags: [Operations]
+      operationId: readiness
+      summary: Check control database and every voting shard
+      responses:
+        '200':
+          description: All database dependencies answered within the configured timeout
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ready]
+        '503':
+          description: not_ready on dependency failure, or overloaded at HTTP admission
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /metrics:
+    get:
+      tags: [Operations]
+      operationId: metrics
+      summary: Read authenticated Prometheus process metrics
+      security:
+        - AdminBearer: []
+      description: |
+        Process-local counters reset on restart. Includes accepted, duplicate,
+        rejected and errored vote counts, batches, pending admitted votes and HTTP
+        admission rejections. Metrics do not contain voter IDs or option choices.
+      responses:
+        '200':
+          description: Prometheus text exposition, version 0.0.4
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                # TYPE efir_votes_accepted_total counter
+                efir_votes_accepted_total 100
+                # TYPE efir_votes_pending gauge
+                efir_votes_pending 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque admin token
+      description: ADMIN_TOKEN from deployment configuration; not a user login or JWT
+    VoterCookie:
+      type: apiKey
+      in: cookie
+      name: efir_voter
+      description: |
+        Opaque HMAC-signed HttpOnly browser cookie issued by POST /api/session.
+        Missing/invalid/expired identity returns 403. Clients must retain the
+        issued value; JavaScript should use same-origin credentials rather than
+        reading or generating it. The identity is browser-scoped, not person-scoped.
+  parameters:
+    PollID:
+      name: id
+      in: path
+      required: true
+      description: Lowercase canonical UUID; a malformed ID returns 404
+      schema:
+        $ref: '#/components/schemas/PollID'
+  headers:
+    RetryAfter:
+      description: |
+        Suggested delay in seconds, currently 1. This header is optional for
+        dependency/metadata failures. Retain the same identity and add retry jitter.
+      schema:
+        type: string
+        pattern: '^[0-9]+$'
+      example: '1'
+    PollCacheControl:
+      description: Public immutable metadata caching policy
+      schema:
+        type: string
+      example: public, max-age=60, immutable
+    PollETag:
+      description: Poll UUID enclosed in double quotes
+      schema:
+        type: string
+      example: '"d1b7c35a-6bf5-4f1f-a73d-9a6a58053398"'
+  responses:
+    Unauthorized:
+      description: Missing or invalid administrator bearer token
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: unauthorized
+            message: admin token required
+    CrossOrigin:
+      description: Supplied Origin does not exactly match PUBLIC_ORIGIN
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: cross_origin
+            message: request origin is not allowed
+    NotFound:
+      description: Malformed, uppercase or nonexistent poll ID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: not_found
+            message: poll not found
+    Unavailable:
+      description: |
+        overloaded at HTTP admission, or unavailable because a dependency failed.
+        Retry-After is supplied for admission overload and may be absent otherwise.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: overloaded
+            message: retry with the same browser identity
+  schemas:
+    PollID:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      example: d1b7c35a-6bf5-4f1f-a73d-9a6a58053398
+    Question:
+      type: string
+      minLength: 1
+      maxLength: 500
+      description: Trimmed question, measured in Unicode characters
+    Options:
+      type: array
+      minItems: 2
+      maxItems: 32
+      uniqueItems: true
+      description: |
+        Ordered labels; each label is trimmed and must be distinct ignoring case.
+        Their zero-based positions are the vote indexes. A/B uses two single-choice options.
+      items:
+        type: string
+        minLength: 1
+        maxLength: 200
+    PollCreate:
+      type: object
+      additionalProperties: false
+      required: [question, type, options, opens_at, closes_at]
+      description: |
+        Do not send a poll ID; it is generated by the server. closes_at must follow
+        opens_at, and the interval must not exceed 24 hours. Past windows are valid.
+        For single polls min_choices=max_choices=1. For multiple polls
+        1 <= min_choices <= max_choices <= number of options.
+      properties:
+        question:
+          $ref: '#/components/schemas/Question'
+        type:
+          type: string
+          enum: [single, multiple]
+        options:
+          $ref: '#/components/schemas/Options'
+        min_choices:
+          type: integer
+          minimum: 0
+          maximum: 32
+          description: Omitted or zero defaults to 1
+          default: 1
+        max_choices:
+          type: integer
+          minimum: 0
+          maximum: 32
+          description: Omitted or zero defaults to 1 for single, or options.length for multiple
+        opens_at:
+          type: string
+          format: date-time
+          description: Inclusive admission boundary; RFC3339 with timezone
+        closes_at:
+          type: string
+          format: date-time
+          description: Exclusive admission boundary; RFC3339 with timezone
+    Poll:
+      type: object
+      additionalProperties: false
+      required: [id, question, type, options, min_choices, max_choices, opens_at, closes_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/PollID'
+        question:
+          $ref: '#/components/schemas/Question'
+        type:
+          type: string
+          enum: [single, multiple]
+        options:
+          $ref: '#/components/schemas/Options'
+        min_choices:
+          type: integer
+          minimum: 1
+          maximum: 32
+        max_choices:
+          type: integer
+          minimum: 1
+          maximum: 32
+        opens_at:
+          type: string
+          format: date-time
+        closes_at:
+          type: string
+          format: date-time
+    VoteRequest:
+      type: object
+      additionalProperties: false
+      required: [choices]
+      properties:
+        choices:
+          type: array
+          minItems: 1
+          maxItems: 32
+          uniqueItems: true
+          description: |
+            Zero-based indexes into the poll's options; selection count must satisfy
+            that poll's min_choices/max_choices. Invalid indexes are rejected.
+          items:
+            type: integer
+            minimum: 0
+            maximum: 31
+    PollResults:
+      type: object
+      additionalProperties: false
+      required: [poll, total_votes, option_counts, observed_at, consistent]
+      properties:
+        poll:
+          $ref: '#/components/schemas/Poll'
+        total_votes:
+          type: integer
+          format: int64
+          minimum: 0
+        option_counts:
+          type: array
+          minItems: 2
+          maxItems: 32
+          description: Counts aligned with poll.options; one count per option
+          items:
+            type: integer
+            format: int64
+            minimum: 0
+        observed_at:
+          type: string
+          format: date-time
+        consistent:
+          type: boolean
+          enum: [false]
+          description: Always false; there is no synchronized cross-shard snapshot
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum:
+            - unauthorized
+            - cross_origin
+            - identity_required
+            - invalid_request
+            - invalid_choices
+            - invalid_key
+            - invalid_poll
+            - not_found
+            - poll_closed
+            - idempotency_conflict
+            - overloaded
+            - unavailable
+            - outcome_unknown
+            - incomplete_results
+            - not_ready
+        message:
+          type: string
+          description: Human-readable explanation; use error rather than message for branching

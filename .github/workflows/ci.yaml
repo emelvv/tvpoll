@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Format and static checks
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+      - name: Start real databases and service
+        run: |
+          cp .env.example .env
+          docker compose up --build --wait -d
+      - name: Unit and integration tests with race detector
+        env:
+          TEST_CONTROL_DATABASE_URL: postgres://tvpoll:local-only-database-password@localhost:15432/tvpoll?sslmode=disable
+          TEST_SHARD_DATABASE_URLS: postgres://tvpoll:local-only-database-password@localhost:15433/tvpoll?sslmode=disable,postgres://tvpoll:local-only-database-password@localhost:15434/tvpoll?sslmode=disable
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
+      - name: HTTP smoke scenario including duplicate votes
+        run: sh scripts/smoke.sh
+      - name: Vulnerability check
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+      - name: Service logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Stop test services
+        if: always()
+        run: docker compose down

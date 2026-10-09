@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Эфир — панель организатора</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/admin.js"></script>
+</head>
+<body>
+  <header class="site-header container"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true">ef</span> <span>эфир<span class="brand-dot">.</span></span></a><div class="header-actions"><span class="eyebrow">Панель организатора</span><button id="logout" class="button-quiet" hidden>Выйти</button></div></header>
+  <main class="container admin-main">
+    <div class="page-heading"><div><p class="eyebrow accent">Панель организатора</p><h1>Эфир под контролем.</h1><p class="muted">Создавайте опросы и наблюдайте за общим результатом.</p></div></div>
+    <section id="login-panel" class="card login-card" aria-labelledby="login-heading"><p class="eyebrow">Доступ организатора</p><h2 id="login-heading">Войти в панель</h2><p class="muted">Введите токен администратора, заданный при запуске сервиса. Он хранится только до закрытия страницы.</p><form id="login-form"><label for="admin-token">Токен администратора</label><input id="admin-token" name="token" type="password" autocomplete="off" spellcheck="false" minlength="32" required><button type="submit">Продолжить <span aria-hidden="true">↗</span></button></form><div id="login-message" class="message" role="status" aria-live="polite"></div></section>
+    <div id="dashboard" class="dashboard" hidden>
+      <section class="card create-card" aria-labelledby="create-heading"><div class="card-top"><span class="eyebrow">Следующий эфир</span><span class="badge">Новый опрос</span></div><h2 id="create-heading">Что спросим у зрителей?</h2><form id="create-form">
+        <label for="question">Вопрос</label><textarea id="question" name="question" rows="2" maxlength="500" required placeholder="Какой вид транспорта вы выбираете чаще?"></textarea>
+        <label for="poll-type">Формат ответа</label><select id="poll-type" name="type"><option value="single">Один вариант (включая A/B)</option><option value="multiple">Несколько вариантов</option></select>
+        <label for="options">Варианты ответа <span class="label-note">Каждый с новой строки</span></label><textarea id="options" name="options" rows="4" required placeholder="Общественный транспорт&#10;Автомобиль&#10;Велосипед&#10;Пешком"></textarea><p class="field-help">От 2 до 32 вариантов, каждый до 200 символов.</p>
+        <div id="choice-limits" class="field-row" hidden><div><label for="min-choices">Минимум ответов</label><input id="min-choices" type="number" min="1" max="32" value="1"></div><div><label for="max-choices">Максимум ответов</label><input id="max-choices" type="number" min="1" max="32" value="2"></div></div>
+        <div class="field-row"><div><label for="opens-at">Начало голосования</label><input id="opens-at" type="datetime-local" required></div><div><label for="closes-at">Завершение</label><input id="closes-at" type="datetime-local" required></div></div><p id="timezone" class="field-help"></p>
+        <button id="create-button" type="submit">Создать опрос <span aria-hidden="true">＋</span></button><div id="create-message" class="message" role="status" aria-live="polite"></div>
+      </form></section>
+      <div class="overview-column"><section class="card polls-card" aria-labelledby="polls-heading"><div class="card-top"><span class="eyebrow">Все эфиры</span><button id="reload-polls" class="button-quiet">Обновить</button></div><h2 id="polls-heading">Ваши опросы</h2><div id="polls-message" class="message" role="status" aria-live="polite"></div><div id="poll-list" class="poll-list"></div></section>
+      <section id="results-panel" class="card results-card" aria-labelledby="results-heading" hidden><div class="card-top"><span class="eyebrow">Обезличенные результаты</span><button id="reload-results" class="button-quiet">Обновить</button></div><h2 id="results-heading"></h2><div class="share-row"><label class="sr-only" for="vote-link">Ссылка на голосование</label><input id="vote-link" readonly><button id="copy-link" class="button-quiet">Копировать</button></div><div id="results-message" class="message" role="status" aria-live="polite"></div><div id="results-content"><div class="stat"><span id="total-votes" class="stat-value">0</span><span class="muted">проголосовавших</span></div><div id="result-bars" class="result-bars"></div><p id="results-note" class="field-help"></p><p id="observed-at" class="field-help"></p></div></section></div>
+    </div>
+  </main>
+  <footer class="container site-footer"><span>Эфир · Панель организатора</span><span>Результаты не содержат идентификаторов зрителей.</span></footer>
+</body>
+</html>

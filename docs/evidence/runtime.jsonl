@@ -1,0 +1,4 @@
+{"at": "2026-10-09T09:51:35.610939+00:00", "stage": "baseline", "healthz": 200, "readyz": 200, "results_status": 200, "total_votes": 500000, "option_counts": [125000, 125000, 125000, 125000], "passed": true}
+{"at": "2026-10-09T09:51:35.911600+00:00", "stage": "shard-unavailable", "healthz": 200, "readyz": 503, "results_status": 503, "total_votes": null, "option_counts": null, "passed": true}
+{"at": "2026-10-09T09:52:02.422870+00:00", "stage": "shard-recovered", "healthz": 200, "readyz": 200, "results_status": 200, "total_votes": 500000, "option_counts": [125000, 125000, 125000, 125000], "passed": true}
+{"at": "2026-10-09T09:52:07.829359+00:00", "stage": "server-restarted", "healthz": 200, "readyz": 200, "results_status": 200, "total_votes": 500000, "option_counts": [125000, 125000, 125000, 125000], "passed": true}
