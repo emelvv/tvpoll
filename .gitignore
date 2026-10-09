@@ -1,7 +1,10 @@
 .env
+.env.*
+!.env.example
 /bin/
 /coverage.out
 /coverage.html
 *.log
 *.zip
 .DS_Store
+__pycache__/

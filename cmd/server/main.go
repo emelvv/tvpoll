@@ -12,6 +12,7 @@ import (
 
 	"github.com/emelvv/tvpoll/internal/api"
 	"github.com/emelvv/tvpoll/internal/config"
+	"github.com/emelvv/tvpoll/internal/demo"
 	"github.com/emelvv/tvpoll/internal/ingest"
 	"github.com/emelvv/tvpoll/internal/store"
 	"github.com/emelvv/tvpoll/web"
@@ -37,7 +38,13 @@ func run() error {
 	defer s.Close()
 	i := ingest.New(s, c.BatchSize, c.Workers, c.QueueSize, c.BatchWait, c.DBTimeout)
 	defer i.Close()
-	srv := &http.Server{Addr: c.Addr, Handler: api.New(s, i, c, web.Files(), &i.Metrics), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 35 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
+	handler := api.New(s, i, c, web.Files(), &i.Metrics)
+	if c.DemoMode {
+		d := demo.New(s, c.DBTimeout)
+		defer d.Close() // The seeder stops before deferred database pool closure.
+		handler = d.Wrap(handler)
+	}
+	srv := &http.Server{Addr: c.Addr, Handler: handler, ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 35 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
 	shutdownCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	errCh := make(chan error, 1)

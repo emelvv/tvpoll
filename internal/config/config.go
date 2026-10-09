@@ -12,7 +12,7 @@ import (
 type Config struct {
 	Addr, ControlURL, AdminToken, CookieSecret, DedupSecret, PublicOrigin string
 	ShardURLs                                                             []string
-	CookieSecure                                                          bool
+	CookieSecure, DemoMode                                                bool
 	BatchSize, Workers, QueueSize, DBConns, MaxInFlight                   int
 	BatchWait, DBTimeout                                                  time.Duration
 }
@@ -66,6 +66,10 @@ func Load() (Config, error) {
 	}
 	if u.Scheme == "http" && c.CookieSecure {
 		return c, fmt.Errorf("http PUBLIC_ORIGIN requires explicit COOKIE_SECURE=false")
+	}
+	c.DemoMode, err = strconv.ParseBool(env("DEMO_MODE", "false"))
+	if err != nil {
+		return c, fmt.Errorf("DEMO_MODE must be true or false")
 	}
 	fields := []struct {
 		name          string

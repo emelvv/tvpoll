@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -58,5 +59,31 @@ func TestHostingPortAndExplicitAddress(t *testing.T) {
 	c, err = Load()
 	if err != nil || c.Addr != ":8081" {
 		t.Fatal(c.Addr, err)
+	}
+}
+
+func TestDemoModeOptIn(t *testing.T) {
+	base(t)
+	t.Setenv("DEMO_MODE", "temporary") // Register restoration before unsetting it.
+	if err := os.Unsetenv("DEMO_MODE"); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load()
+	if err != nil || c.DemoMode {
+		t.Fatal("demo mode must be disabled by default", c, err)
+	}
+	t.Setenv("DEMO_MODE", "true")
+	c, err = Load()
+	if err != nil || !c.DemoMode {
+		t.Fatal("demo mode was not enabled", c, err)
+	}
+	t.Setenv("DEMO_MODE", "false")
+	c, err = Load()
+	if err != nil || c.DemoMode {
+		t.Fatal("demo mode was not disabled", c, err)
+	}
+	t.Setenv("DEMO_MODE", "invalid")
+	if _, err := Load(); err == nil {
+		t.Fatal("invalid demo mode accepted")
 	}
 }
